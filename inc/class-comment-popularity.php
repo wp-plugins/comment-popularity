@@ -10,12 +10,14 @@ class HMN_Comment_Popularity {
 	/**
 	 * Plugin version number.
 	 */
-	const VERSION = '1.0.0';
+	const HMN_CP_PLUGIN_VERSION = '1.1.1';
 
 	/**
 	 * The minimum PHP version compatibility.
 	 */
-	const MINIMUM_PHP_VERSION = '5.3.2';
+	const HMN_CP_REQUIRED_PHP_VERSION = '5.3.2';
+
+	const HMN_CP_REQUIRED_WP_VERSION = '3.8.4';
 
 	/**
 	 * The instance of HMN_Comment_Popularity.
@@ -54,7 +56,7 @@ class HMN_Comment_Popularity {
 
 		$this->admin_roles = apply_filters( 'hmn_cp_roles', array( 'administrator', 'editor' ) );
 
-		add_action( 'wp_insert_comment', array( $this, 'set_comment_weight' ), 10, 2 );
+		add_action( 'wp_insert_comment', array( $this, 'insert_comment_callback' ), 10, 2 );
 
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
 
@@ -81,11 +83,11 @@ class HMN_Comment_Popularity {
 		switch ( $type ) {
 
 			case 'upvote':
-				$value = apply_filters( 'upvote_value', 1 );
+				$value = apply_filters( 'hmn_cp_upvote_value', 1 );
 				break;
 
 			case 'downvote':
-				$value = apply_filters( 'downvote_value', 1 );
+				$value = apply_filters( 'hmn_cp_downvote_value', 1 );
 				break;
 
 			default:
@@ -103,8 +105,16 @@ class HMN_Comment_Popularity {
 	public function activate() {
 
 		// Check PHP version. We need at least 5.3.2 for Composer.
-		if ( version_compare( PHP_VERSION, '5.3.2', '<' ) ) {
+		if ( version_compare( PHP_VERSION, self::HMN_CP_REQUIRED_PHP_VERSION, '<' ) ) {
 			deactivate_plugins( basename( __FILE__ ) );
+			wp_die( sprintf( __( 'This plugin requires PHP Version %s. Sorry about that.', 'comment-popularity' ), self::HMN_CP_REQUIRED_PHP_VERSION ), 'Comment Popularity', array( 'back_link' => true ) );
+		}
+
+		global $wp_version;
+
+		if ( version_compare( $wp_version, self::HMN_CP_REQUIRED_WP_VERSION, '<' ) ) {
+			deactivate_plugins( basename( __FILE__ ) );
+			wp_die( sprintf( __( 'This plugin requires WordPress version %s. Sorry about that.', 'comment-popularity' ), self::HMN_CP_REQUIRED_WP_VERSION ), 'Comment Popularity', array( 'back_link' => true ) );
 		}
 	}
 
@@ -183,11 +193,11 @@ class HMN_Comment_Popularity {
 	 */
 	public function enqueue_scripts() {
 
-		wp_enqueue_style( 'growl', plugins_url( '../assets/js/modules/growl/stylesheets/jquery.growl.min.css', __FILE__ ), array(), self::VERSION );
+		wp_enqueue_style( 'growl', plugins_url( '../assets/js/modules/growl/stylesheets/jquery.growl.min.css', __FILE__ ), array(), self::HMN_CP_PLUGIN_VERSION );
 
-		wp_enqueue_script( 'growl', plugins_url( '../assets/js/modules/growl/javascripts/jquery.growl.min.js', __FILE__ ), array( 'jquery' ), self::VERSION, true );
+		wp_enqueue_script( 'growl', plugins_url( '../assets/js/modules/growl/javascripts/jquery.growl.min.js', __FILE__ ), array( 'jquery' ), self::HMN_CP_PLUGIN_VERSION, true );
 
-		wp_register_script( 'comment-popularity', plugins_url( '../assets/js/voting.min.js', __FILE__ ), array( 'jquery', 'growl' ), self::VERSION );
+		wp_register_script( 'comment-popularity', plugins_url( '../assets/js/voting.min.js', __FILE__ ), array( 'jquery', 'growl' ), self::HMN_CP_PLUGIN_VERSION );
 
 		$args = array(
 			'hmn_vote_nonce' => wp_create_nonce( 'hmn_vote_submit' ),
@@ -215,7 +225,7 @@ class HMN_Comment_Popularity {
 
 		}
 
-		return plugin_dir_path( __FILE__ ) . 'templates/comments.php';
+		return apply_filters( 'hmn_cp_comments_template_path', plugin_dir_path( __FILE__ ) . 'templates/comments.php' );
 
 	}
 
@@ -229,89 +239,8 @@ class HMN_Comment_Popularity {
 	 */
 	function comment_callback( $comment, $args, $depth ) {
 
-		$GLOBALS['comment'] = $comment;
+		include apply_filters( 'hmn_cp_single_comment_template_path', plugin_dir_path( __FILE__ ) . 'templates/comment.php' );
 
-		if ( 'pingback' == $comment->comment_type || 'trackback' == $comment->comment_type ) : ?>
-
-			<li id="comment-<?php comment_ID(); ?>" <?php comment_class(); ?>>
-			<div class="comment-body">
-				<?php _e( 'Pingback:', 'comment-popularity' ); ?> <?php comment_author_link(); ?> <?php edit_comment_link( __( 'Edit', 'comment-popularity' ), '<span class="edit-link">', '</span>' ); ?>
-			</div>
-
-		<?php else : ?>
-
-		<li id="comment-<?php comment_ID(); ?>" <?php comment_class( empty( $args['has_children'] ) ? '' : 'comment-parent' ); ?>>
-			<article id="div-comment-<?php comment_ID(); ?>" class="comment-body">
-				<header class="comment-header">
-					<?php $this->render_ui( get_comment_ID() ); ?>
-					<?php // Avatar
-					if ( 0 != $args['avatar_size'] ) :
-						echo get_avatar( $comment, $args['avatar_size'] );
-					endif;
-
-					?>
-					<div class="comment-date">
-						<a href="<?php echo esc_url( get_comment_link( $comment->comment_ID ) ); ?>">
-							<time datetime="<?php comment_time( 'c' ); ?>">
-								<?php
-								printf(
-									_x( '%1$s at %2$s', '1: date, 2: time', 'comment-popularity' ),
-									get_comment_date(),
-									get_comment_time()
-								);
-								?>
-							</time>
-						</a>
-					</div>
-					<div class="comment-author vcard">
-						<?php
-						printf(
-							'%1$s <span class="says">%2$s</span>',
-							sprintf(
-								'<cite class="fn">%s</cite>',
-								get_comment_author_link()
-							),
-							_x( 'says:', 'e.g. Bob says hello.', 'comment-popularity' )
-						);
-
-						$comment_author_email = get_comment_author_email( $comment->comment_ID );
-						$author = get_user_by( 'email', $comment_author_email );
-
-						if ( false !== $author ) {
-
-							$author_karma = $this->get_user_karma( $comment_author_email );
-
-							if ( false !== $author_karma ) {
-								printf( __( '%1$s( User Karma: %2$s )%3$s', 'comment-popularity' ), '<small class="user-karma">', esc_html( $author_karma ), '</small>' );
-							}
-
-						}
-
-
-						?>
-					</div>
-
-					<?php if ( '0' == $comment->comment_approved ) : ?>
-						<p class="comment-awaiting-moderation"><?php _e( 'Your comment is awaiting moderation.', 'comment-popularity' ); ?></p>
-					<?php endif; ?>
-				</header>
-
-				<div class="comment-content">
-					<?php comment_text(); ?>
-				</div>
-
-				<?php
-				comment_reply_link( array_merge( $args, array(
-					'add_below' => 'div-comment',
-					'depth'     => $depth,
-					'max_depth' => $args['max_depth'],
-					'before'    => '<footer class="comment-reply">',
-					'after'     => '</footer>',
-				) ) );
-				?>
-			</article>
-
-		<?php endif;
 	}
 
 	/**
@@ -347,7 +276,7 @@ class HMN_Comment_Popularity {
 
 		$comment = get_comment( $comment_id );
 
-		return $comment->comment_karma;
+		return (int)$comment->comment_karma;
 
 	}
 
@@ -379,9 +308,18 @@ class HMN_Comment_Popularity {
 
 		$comment_arr['comment_karma'] = $weight_value;
 
-		$ret = wp_update_comment( $comment_arr );
+		wp_update_comment( $comment_arr );
 
-		return $ret;
+		$comment_arr = get_comment( $comment_id, ARRAY_A );
+
+		/**
+		 * Fires once a comment has been updated.
+		 *
+		 * @param array $comment_arr The comment data array.
+		 */
+		do_action( 'hmn_cp_update_comment_weight', $comment_arr );
+
+		return $comment_arr['comment_karma'];
 	}
 
 	/**
@@ -402,13 +340,9 @@ class HMN_Comment_Popularity {
 	 * @param $comment_id
 	 * @param $comment
 	 */
-	public function set_comment_weight( $comment_id, $comment ) {
+	public function insert_comment_callback( $comment_id, $comment ) {
 
 		$user_id = get_current_user_id();
-
-		if ( ! $this->user_can_vote( $user_id, $comment_id ) ) {
-			return;
-		}
 
 		$is_expert = $this->get_user_expert_status( $user_id );
 
@@ -448,7 +382,17 @@ class HMN_Comment_Popularity {
 
 		update_user_meta( $commenter_id, 'hmn_user_karma', $user_karma );
 
-		return get_user_meta( $commenter_id, 'hmn_user_karma', true );
+		$user_karma = get_user_meta( $commenter_id, 'hmn_user_karma', true );
+
+		/**
+		 * Fires once the user meta has been updated for the karma.
+		 *
+		 * @param int $commenter_id
+		 * @param int $user_karma
+		 */
+		do_action( 'hmn_cp_update_user_karma', $commenter_id, $user_karma );
+
+		return $user_karma;
 	}
 
 
@@ -508,6 +452,12 @@ class HMN_Comment_Popularity {
 	 */
 	public function user_can_vote( $user_id, $comment_id, $action = '' ) {
 
+		$comment = get_comment( $comment_id );
+
+		if ( $comment->user_id && ( $user_id === (int)$comment->user_id ) ) {
+			return new WP_Error( 'upvote_own_comment', __( 'You cannot upvote your own comments.', 'comment-popularity' ) );
+		}
+
 		if ( ! current_user_can( 'vote_on_comments' ) ) {
 			return new WP_Error( 'insufficient_permissions', __( 'You lack sufficient permissions to vote on comments', 'comment-popularity' ) );
 		}
@@ -550,6 +500,9 @@ class HMN_Comment_Popularity {
 	 *
 	 * @param $user_id
 	 * @param $comment_id
+	 * @param $action
+	 *
+	 * @return mixed
 	 */
 	public function update_comments_voted_on_for_user( $user_id, $comment_id, $action ) {
 
@@ -560,7 +513,20 @@ class HMN_Comment_Popularity {
 
 		update_user_meta( $user_id, 'comments_voted_on', $comments_voted_on );
 
-		return $comments_voted_on[ 'comment_id_' . $comment_id ];
+		$comments_voted_on = get_user_meta( $user_id, 'comments_voted_on', true );
+
+		$updated = $comments_voted_on[ 'comment_id_' . $comment_id ];
+
+		/**
+		 * Fires once the user meta has been updated.
+		 *
+		 * @param int   $user_id
+		 * @param int   $comment_id
+		 * @param array $updated
+		 */
+		do_action( 'hmn_cp_update_comments_voted_on_for_user', $user_id, $comment_id, $updated );
+
+		return $updated;
 	}
 
 	/**
@@ -602,7 +568,7 @@ class HMN_Comment_Popularity {
 	}
 
 	/**
-	 * Handles the voting ajax request.
+	 * Processes the comment vote logic.
 	 *
 	 * @param $vote
 	 * @param $comment_id
