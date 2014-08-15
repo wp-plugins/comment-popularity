@@ -3,7 +3,7 @@ Contributors: pauldewouters, mattheu,humanmade,cfo-publishing
 Tags: comments,vote,upvote,karma
 Requires at least: 3.8.4
 Tested up to: 4.0-beta2
-Stable tag: 1.1.1
+Stable tag: 1.1.2
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,7 @@ Follow development of this plugin on [Github](https://github.com/humanmade/comme
 4. Activate the plugin in the Plugin dashboard
 
 == Frequently Asked Questions ==
+
 = Can anonymous visitors vote on comments? =
 
 No, they can\'t. Currently, the only way to be able to vote is to be a registered member of the site where the plugin is
@@ -83,11 +84,22 @@ To display the comment author karma:
 `hmn_cp_the_comment_author_karma();`
 
 == Screenshots ==
+
 1. Set the default karma value for expert users.
 2. Set the user\'s karma and expert label.
 3. The comment voting controls, and the user\'s karma on the public facing site.
 
+== Other notes ==
+
+
 == Changelog ==
+
+== 1.1.2 / 2014-08-15 ==
+
+ * Bump version
+ * Pass user ID as param instead of email
+ * Add RTD config
+ * fix to readme
 
 == 1.1.1 / 2014-08-13 ==
 
@@ -167,7 +179,7 @@ To display the comment author karma:
  * Add readme to markdown task
  * Documentation for how to remove the built in comment template
  
-==  1.0.1 ==
+== 1.0.1 ==
 
 * Fix contributors
 * Remove unneeded files
