@@ -1,6 +1,4 @@
 <?php
-// Load our dependencies
-require_once plugin_dir_path( __FILE__ ) . '/lib/autoload.php';
 
 /**
  * Class HMN_Comment_Popularity
@@ -10,7 +8,7 @@ class HMN_Comment_Popularity {
 	/**
 	 * Plugin version number.
 	 */
-	const HMN_CP_PLUGIN_VERSION = '1.1.3';
+	const HMN_CP_PLUGIN_VERSION = '1.1.4';
 
 	/**
 	 * The minimum PHP version compatibility.
@@ -52,6 +50,8 @@ class HMN_Comment_Popularity {
 	 */
 	private function __construct() {
 
+		$this->includes();
+
 		$this->interval = apply_filters( 'hmn_cp_interval', 15 * MINUTE_IN_SECONDS );
 
 		$this->admin_roles = apply_filters( 'hmn_cp_roles', array( 'administrator', 'editor' ) );
@@ -67,8 +67,31 @@ class HMN_Comment_Popularity {
 
 		add_filter( 'comments_template', array( $this, 'custom_comments_template' ) );
 
+		add_action( 'widgets_init', array( $this, 'register_widgets' ) );
+
 		$this->init_twig();
 		$this->set_permissions();
+	}
+
+	/*
+	 * Include required files.
+	 */
+	protected function includes() {
+
+		// Load our dependencies
+		require_once plugin_dir_path( __FILE__ ) . 'lib/autoload.php';
+
+		// Widgets
+		require_once plugin_dir_path( __FILE__ ) . 'widgets/class-widget-most-voted.php';
+	}
+
+	/**
+	 * Register the plugin widgets.
+	 */
+	public function register_widgets() {
+
+		register_widget( 'HMN_CP_Widget_Most_Voted' );
+
 	}
 
 	/**
@@ -103,12 +126,6 @@ class HMN_Comment_Popularity {
 	 * Run checks on plugin activation.
 	 */
 	public static function activate() {
-
-		// Check PHP version. We need at least 5.3.2 for Composer.
-		if ( version_compare( PHP_VERSION, self::HMN_CP_REQUIRED_PHP_VERSION, '<' ) ) {
-			deactivate_plugins( basename( __FILE__ ) );
-			wp_die( sprintf( __( 'This plugin requires PHP Version %s. Sorry about that.', 'comment-popularity' ), self::HMN_CP_REQUIRED_PHP_VERSION ), 'Comment Popularity', array( 'back_link' => true ) );
-		}
 
 		global $wp_version;
 
