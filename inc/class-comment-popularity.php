@@ -8,7 +8,7 @@ class HMN_Comment_Popularity {
 	/**
 	 * Plugin version number.
 	 */
-	const HMN_CP_PLUGIN_VERSION = '1.1.5';
+	const HMN_CP_PLUGIN_VERSION = '1.2.0';
 
 	/**
 	 * The minimum PHP version compatibility.
@@ -83,6 +83,8 @@ class HMN_Comment_Popularity {
 
 		// Widgets
 		require_once plugin_dir_path( __FILE__ ) . 'widgets/class-widget-most-voted.php';
+		require_once plugin_dir_path( __FILE__ ) . 'widgets/experts/class-widget-experts.php';
+
 	}
 
 	/**
@@ -91,6 +93,7 @@ class HMN_Comment_Popularity {
 	public function register_widgets() {
 
 		register_widget( 'HMN_CP_Widget_Most_Voted' );
+		register_widget( 'HMN_CP_Widget_Experts' );
 
 	}
 
@@ -120,6 +123,13 @@ class HMN_Comment_Popularity {
 		}
 
 		return $value;
+	}
+
+	public function get_vote_labels() {
+		return array(
+			'upvote'   => _x( 'upvote', 'verb', 'comment-popularity' ),
+			'downvote' => _x( 'downvote', 'verb', 'comment-popularity' ),
+		);
 	}
 
 	/**
@@ -270,7 +280,7 @@ class HMN_Comment_Popularity {
 
 		$container_classes = array( 'comment-weight-container' );
 
-		if ( ! $this->user_can_vote( get_current_user_id(), $comment_id ) ) {
+		if ( ! current_user_can( 'vote_on_comments' ) ) {
 			$container_classes[] = 'voting-disabled';
 		}
 
@@ -417,25 +427,26 @@ class HMN_Comment_Popularity {
 	 *
 	 * @return string
 	 */
-	public function get_comments_sorted_by_weight( $args = array(), $comments = null ) {
+	public function get_comments_sorted_by_weight( $html = false, $args = array() ) {
 
-		$defaults = array( 'echo' => false );
+		// WP_Comment_Query arguments
+		$defaults = array (
+			'status'         => 'approve',
+			'type'           => 'comment',
+			'order'          => 'DESC',
+			'orderby'        => 'comment_karma',
+		);
 
-		$args = array_merge( $defaults, $args );
+		$get_comments_args = wp_parse_args( $args, $defaults );
 
-		if ( null == $comments ) {
+		// The Comment Query
+		$comment_query = new WP_Comment_Query;
+		$comments = $comment_query->query( $get_comments_args );
 
-			global $wp_query;
+		if ( $html )
+			return wp_list_comments( $args, $comments );
 
-			$comments = $wp_query->comments;
-
-		}
-
-		uasort( $comments, function( $a, $b ){
-			return $b->comment_karma > $a->comment_karma;
-		});
-
-		return wp_list_comments( $args, $comments );
+		return $comments;
 	}
 
 	/**
@@ -449,14 +460,16 @@ class HMN_Comment_Popularity {
 	 */
 	public function user_can_vote( $user_id, $comment_id, $action = '' ) {
 
-		$comment = get_comment( $comment_id );
+		$labels = $this->get_vote_labels();
 
-		if ( $comment->user_id && ( $user_id === (int)$comment->user_id ) ) {
-			return new WP_Error( 'upvote_own_comment', __( 'You cannot upvote your own comments.', 'comment-popularity' ) );
-		}
+		$comment = get_comment( $comment_id );
 
 		if ( ! current_user_can( 'vote_on_comments' ) ) {
 			return new WP_Error( 'insufficient_permissions', __( 'You lack sufficient permissions to vote on comments', 'comment-popularity' ) );
+		}
+
+		if ( $comment->user_id && ( $user_id === (int)$comment->user_id ) ) {
+			return new WP_Error( 'upvote_own_comment', sprintf( __( 'You cannot %s your own comments.', 'comment-popularity' ), $labels[ $action ] ) );
 		}
 
 		if ( ! is_user_logged_in() ) {
@@ -474,7 +487,7 @@ class HMN_Comment_Popularity {
 		$last_action = $comments_voted_on[ 'comment_id_' . $comment_id ]['last_action'];
 
 		if ( $last_action === $action ) {
-			return new WP_Error( 'same_action', sprintf( __( 'You already %sd this comment', 'comment-popularity' ), $action ) );
+			return new WP_Error( 'same_action', sprintf( __( 'You cannot %s this comment again.', 'comment-popularity' ), $labels[ $action ] ) );
 		}
 
 		// Is user trying to vote too fast?
