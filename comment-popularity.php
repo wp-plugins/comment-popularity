@@ -3,7 +3,7 @@
 Plugin Name: Comment Popularity
 Plugin URI: https://github.com/humanmade/comment-popularity
 Description: Allow visitors to vote on comments.
-Version: 1.3.1
+Version: 1.3.2
 Author: Human Made Limited
 Author URI: http://humanmade.co.uk
 Text Domain: comment-popularity
@@ -42,7 +42,7 @@ function hmn_cp_init() {
 	}
 
 }
-add_action( 'init', 'hmn_cp_init' ); // BuddyPress complains if set earlier
+add_action( 'plugins_loaded', 'hmn_cp_init' );
 
 // Admin class
 if ( is_admin() && ( ! defined( 'DOING_AJAX' ) || ! DOING_AJAX ) ) {
