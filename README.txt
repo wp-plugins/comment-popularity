@@ -81,11 +81,12 @@ Under Settings > Discussion, and Users > Profile
 
 First thing - you need to remove the default comments template added by the plugin.
 
-`add_action( 'plugins_loaded', function() {
-	remove_filter( 'comments_template', array( 'HMN_Comment_Popularity', 'custom_comments_template' ) );
-}, 100 );`
+`if ( class_exists( 'CommentPopularity\HMN_Comment_Popularity' ) ) {
+	$cp = CommentPopularity\HMN_Comment_Popularity::get_instance();
+	remove_filter( 'comments_template', array( $cp, 'custom_comments_template' ) );
+}`
 
-Secondly, you need to add replace the `wp_list_comments` call with the following code:
+Secondly, you need to add replace the `wp_list_comments` call with the following code, if you want the comments sorted by weight, otherwise, leave it alone:
 
 `if ( function_exists( 'hmn_cp_the_sorted_comments' ) ) {
 	hmn_cp_the_sorted_comments( $args );
@@ -93,7 +94,8 @@ Secondly, you need to add replace the `wp_list_comments` call with the following
 	wp_list_comments();
 }`
 
-Finally, you need to add the following function to your custom comment template where you would like to output the voting icons.
+Finally, you need to add the following function to your custom comment template where you would like to output the voting icons. You'll need to pass a 'callback' argument to `wp_list_comments` with the name of your function.
+See [this Codex article](http://codex.wordpress.org/Function_Reference/wp_list_comments#Comments_Only_With_A_Custom_Comment_Display)
 
 `hmn_cp_the_comment_upvote_form();`
 
