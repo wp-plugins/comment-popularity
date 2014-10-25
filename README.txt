@@ -4,7 +4,7 @@ Contributors: pauldewouters, mattheu,humanmade,cfo-publishing
 Tags: comments,vote,upvote,karma,widget
 Requires at least: 3.8.4
 Tested up to: 4.0
-Stable tag: 1.3.2
+Stable tag: 1.3.3
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -109,10 +109,6 @@ To display the comment author karma:
 
 == Upgrade Notice ==
 
-= 1.3.2 = 
-
-* Fixes unregistered widgets
-
 = 1.3.0 =
 
 * Guest visitors can now vote ( requires setting a flag )
@@ -134,9 +130,13 @@ To display the comment author karma:
 
 == Changelog ==
 
-= 1.3.2 / 2014-10-10 =
+= 1.3.3 / 2014-10-25
 
-* Revert to loading on `plugins_loaded`
+* Fix fatal error on uninstall
+
+= 1.3.2 / 2014-10-10
+
+* Init plugin earlier
 
 = 1.3.1 / 2014-09-11 =
 
