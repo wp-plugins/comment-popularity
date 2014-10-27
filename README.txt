@@ -8,11 +8,11 @@ Stable tag: 1.3.3
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-Comment Popularity adds the ability for logged in users to vote on comments.
+Comment Popularity gives visitors to your site the ability to vote comments up or down.
 
 == Description ==
 
-With this plugin, members of your site will be able to vote comments up or down. Think Reddit comments.
+With this plugin, visitors of your site will be able to vote comments up or down. Think Reddit comments.
 
 After activating the plugin, there will be up/down arrows next to each comment and the total weight of the comment.
 Comments are sorted by weight in a descending order.
