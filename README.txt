@@ -1,18 +1,18 @@
 === Comment Popularity ===
 
-Contributors: pauldewouters, mattheu,humanmade,cfo-publishing
+Contributors: pauldewouters,mattheu,humanmade,cfo-publishing
 Tags: comments,vote,upvote,karma,widget
-Requires at least: 3.8.4
-Tested up to: 4.0
-Stable tag: 1.3.3
+Requires at least: 3.9
+Tested up to: 4.2-alpha
+Stable tag: 1.3.4
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-Comment Popularity gives visitors to your site the ability to vote comments up or down.
+Comment Popularity adds the ability for logged in users to vote on comments.
 
 == Description ==
 
-With this plugin, visitors of your site will be able to vote comments up or down. Think Reddit comments.
+With this plugin, members of your site will be able to vote comments up or down. Think Reddit comments.
 
 After activating the plugin, there will be up/down arrows next to each comment and the total weight of the comment.
 Comments are sorted by weight in a descending order.
@@ -81,12 +81,11 @@ Under Settings > Discussion, and Users > Profile
 
 First thing - you need to remove the default comments template added by the plugin.
 
-`if ( class_exists( 'CommentPopularity\HMN_Comment_Popularity' ) ) {
-	$cp = CommentPopularity\HMN_Comment_Popularity::get_instance();
-	remove_filter( 'comments_template', array( $cp, 'custom_comments_template' ) );
-}`
+`add_action( 'plugins_loaded', function() {
+	remove_filter( 'comments_template', array( 'HMN_Comment_Popularity', 'custom_comments_template' ) );
+}, 100 );`
 
-Secondly, you need to add replace the `wp_list_comments` call with the following code, if you want the comments sorted by weight, otherwise, leave it alone:
+Secondly, you need to add replace the `wp_list_comments` call with the following code:
 
 `if ( function_exists( 'hmn_cp_the_sorted_comments' ) ) {
 	hmn_cp_the_sorted_comments( $args );
@@ -94,8 +93,7 @@ Secondly, you need to add replace the `wp_list_comments` call with the following
 	wp_list_comments();
 }`
 
-Finally, you need to add the following function to your custom comment template where you would like to output the voting icons. You'll need to pass a 'callback' argument to `wp_list_comments` with the name of your function.
-See [this Codex article](http://codex.wordpress.org/Function_Reference/wp_list_comments#Comments_Only_With_A_Custom_Comment_Display)
+Finally, you need to add the following function to your custom comment template where you would like to output the voting icons.
 
 `hmn_cp_the_comment_upvote_form();`
 
@@ -131,6 +129,11 @@ To display the comment author karma:
 * Fixes a bug which prevented the user karma to appear in the single comment template.
 
 == Changelog ==
+
+= 1.3.4 / 2015-02-12 =
+
+* Only add capabilities on activation
+* Display user first and last names in widget if available
 
 = 1.3.3 / 2014-10-25 =
 

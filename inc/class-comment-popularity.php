@@ -24,7 +24,7 @@ class HMN_Comment_Popularity {
 	/**
 	 * The instance of HMN_Comment_Popularity.
 	 *
-	 * @var the single class instance.
+	 * @var HMN_Comment_Popularity the single class instance.
 	 */
 	private static $instance;
 
@@ -33,14 +33,7 @@ class HMN_Comment_Popularity {
 	 *
 	 * @var null
 	 */
-	protected $twig = null;
-
-	/**
-	 * User roles allowed to manage karma settings.
-	 *
-	 * @var mixed|void
-	 */
-	protected $admin_roles;
+	protected $twig;
 
 	/**
 	 * @var bool
@@ -58,9 +51,24 @@ class HMN_Comment_Popularity {
 	protected $allow_negative_comment_weight = false;
 
 	/**
-	 * @var null
+	 * @var HMN_CP_Visitor
 	 */
-	protected $visitor = null;
+	protected $visitor;
+
+	/**
+	 * Provides access to the class instance
+	 *
+	 * @return HMN_Comment_Popularity
+	 */
+	public static function get_instance() {
+
+		if ( ! self::$instance instanceof HMN_Comment_Popularity ) {
+			self::$instance = new HMN_Comment_Popularity();
+
+		}
+
+		return self::$instance;
+	}
 
 	/**
 	 * Creates a new HMN_Comment_Popularity object, and registers with WP hooks.
@@ -68,8 +76,6 @@ class HMN_Comment_Popularity {
 	private function __construct() {
 
 		$this->includes();
-
-		$this->admin_roles = apply_filters( 'hmn_cp_roles', array( 'administrator', 'editor' ) );
 
 		add_action( 'wp_insert_comment', array( $this, 'insert_comment_callback' ), 10, 2 );
 
@@ -85,7 +91,6 @@ class HMN_Comment_Popularity {
 		add_action( 'widgets_init', array( $this, 'register_widgets' ) );
 
 		$this->init_twig();
-		$this->set_permissions();
 
 	}
 
@@ -99,7 +104,7 @@ class HMN_Comment_Popularity {
 	}
 
 	/**
-	 * @return null
+	 * @return HMN_CP_Visitor
 	 */
 	public function get_visitor() {
 		return $this->visitor;
@@ -179,7 +184,7 @@ class HMN_Comment_Popularity {
 
 		global $wp_version;
 
-		if ( version_compare( floatval( $wp_version ), self::HMN_CP_REQUIRED_WP_VERSION, '<' ) ) {
+		if ( version_compare( $wp_version, self::HMN_CP_REQUIRED_WP_VERSION, '<' ) ) {
 
 			if ( current_user_can( 'activate_plugins' ) ) {
 
@@ -189,6 +194,33 @@ class HMN_Comment_Popularity {
 			}
 
 		}
+
+		self::set_permissions();
+	}
+
+	/**
+	 * Tasks to perform when plugin is deactivated.
+	 */
+	public static function deactivate() {
+
+		foreach ( get_editable_roles() as $role ) {
+
+			$role_obj = get_role( strtolower( $role['name'] ) );
+
+			if ( ! empty( $role_obj ) ) {
+
+				if ( in_array( 'manage_user_karma_settings', $role_obj->capabilities) ) {
+					$role_obj->remove_cap( 'manage_user_karma_settings' );
+				}
+
+				if ( in_array( 'vote_on_comments', $role_obj->capabilities ) ) {
+					$role_obj->remove_cap( 'vote_on_comments' );
+				}
+
+			}
+
+		}
+
 	}
 
 	/**
@@ -204,20 +236,13 @@ class HMN_Comment_Popularity {
 	}
 
 	/**
-	 * Returns the plugin roles array.
-	 *
-	 * @return mixed|void
-	 */
-	public function get_roles() {
-		return $this->admin_roles;
-	}
-
-	/**
 	 * Add custom capabilities to allowed roles.
 	 */
-	public function set_permissions() {
+	public static function set_permissions() {
 
-		foreach ( $this->admin_roles as $role ) {
+		$admin_roles = apply_filters( 'hmn_cp_roles', array( 'administrator', 'editor' ) );
+
+		foreach ( $admin_roles as $role ) {
 
 			$role = get_role( $role );
 
@@ -245,21 +270,6 @@ class HMN_Comment_Popularity {
 	 * Disallow object cloning
 	 */
 	private function __clone() {}
-
-	/**
-	 * Provides access to the class instance
-	 *
-	 * @return HMN_Comment_Popularity
-	 */
-	public static function get_instance() {
-
-		if ( ! self::$instance instanceof HMN_Comment_Popularity ) {
-			self::$instance = new HMN_Comment_Popularity();
-
-		}
-
-		return self::$instance;
-	}
 
 	/**
 	 * Load the Javascripts
@@ -433,7 +443,6 @@ class HMN_Comment_Popularity {
 	 * Sorts the comments by weight and returns them.
 	 *
 	 * @param array $args
-	 * @param null  $comments
 	 *
 	 * @return string
 	 */
@@ -514,7 +523,7 @@ class HMN_Comment_Popularity {
 	 * Updates the comment author karma when a comment is voted on.
 	 *
 	 * @param $commenter_id
-	 * @param $vote
+	 * @param $value
 	 *
 	 * @return int|mixed|void
 	 */
@@ -650,7 +659,7 @@ class HMN_Comment_Popularity {
 	}
 
 	/**
-	 * Determine if negative commentweight is allowed
+	 * Determine if negative comment weight is allowed
 	 *
 	 * @return mixed|void
 	 */
